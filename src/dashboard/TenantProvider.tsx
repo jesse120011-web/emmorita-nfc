@@ -9,7 +9,7 @@ import {
 } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabase";
 import { slugify } from "../lib/slug";
-import type { MembershipRow } from "../lib/types";
+import type { BusinessRow, MembershipRow } from "../lib/types";
 
 type TenantState = {
   loading: boolean;
@@ -22,6 +22,12 @@ type TenantState = {
 };
 
 const TenantContext = createContext<TenantState | null>(null);
+
+function isBusinessArray(
+  business: MembershipRow["businesses"],
+): business is BusinessRow[] {
+  return Array.isArray(business);
+}
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -47,10 +53,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       setMemberships([]);
     } else {
       const rows = ((data as MembershipRow[] | null) ?? []).map((row) => {
-        const nested = row.businesses as MembershipRow["businesses"] | MembershipRow["businesses"][];
+        const businesses = row.businesses;
         return {
           ...row,
-          businesses: Array.isArray(nested) ? (nested[0] ?? null) : nested,
+          businesses: isBusinessArray(businesses) ? (businesses[0] ?? null) : businesses,
         };
       });
       setMemberships(rows);
