@@ -1,0 +1,11 @@
+-- Development notes only. Do not insert production secrets or personal data.
+--
+-- 1. Apply migrations (`supabase db push` or the SQL editor).
+-- 2. Create a user in Supabase Auth.
+-- 3. Sign in at /login and create a business from /app.
+-- 4. Publish the profile, then open /t/{slug}.
+--
+-- To grant a platform admin (service role / SQL editor only):
+--
+--   insert into public.platform_admins (user_id)
+--   values ('00000000-0000-0000-0000-000000000000');
