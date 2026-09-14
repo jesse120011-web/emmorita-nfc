@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useTenant } from "../../dashboard/TenantProvider";
+import { useTenant } from "../../dashboard/useTenant";
 import { getSupabaseBrowserClient } from "../../lib/supabase";
 import { LinksEditor } from "./LinksEditor";
 

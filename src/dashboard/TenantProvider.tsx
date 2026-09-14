@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -9,24 +7,19 @@ import {
 } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabase";
 import { slugify } from "../lib/slug";
-import type { BusinessRow, MembershipRow } from "../lib/types";
+import type { MembershipRow } from "../lib/types";
+import { TenantContext, type TenantState } from "./tenant-context";
 
-type TenantState = {
-  loading: boolean;
-  error: string | null;
-  memberships: MembershipRow[];
-  active: MembershipRow | null;
-  setActiveBusinessId: (id: string) => void;
-  createBusiness: (name: string) => Promise<string | null>;
-  refresh: () => Promise<void>;
+type MembershipBusiness = NonNullable<MembershipRow["businesses"]>;
+type MembershipQueryRow = Omit<MembershipRow, "businesses"> & {
+  businesses: MembershipBusiness[] | null;
 };
 
-const TenantContext = createContext<TenantState | null>(null);
-
-function isBusinessArray(
-  business: MembershipRow["businesses"],
-): business is BusinessRow[] {
-  return Array.isArray(business);
+function normalizeMembership(row: MembershipQueryRow): MembershipRow {
+  return {
+    ...row,
+    businesses: row.businesses?.[0] ?? null,
+  };
 }
 
 export function TenantProvider({ children }: { children: ReactNode }) {
@@ -46,19 +39,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     const { data, error: queryError } = await supabase
       .from("business_members")
       .select("id, business_id, role, businesses(id, name, slug, status, country_code)")
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .returns<MembershipQueryRow[]>();
 
     if (queryError) {
       setError(queryError.message);
       setMemberships([]);
     } else {
-      const rows = ((data as MembershipRow[] | null) ?? []).map((row) => {
-        const businesses = row.businesses;
-        return {
-          ...row,
-          businesses: isBusinessArray(businesses) ? (businesses[0] ?? null) : businesses,
-        };
-      });
+      const rows = (data ?? []).map(normalizeMembership);
       setMemberships(rows);
       setError(null);
       setActiveId((current) => current ?? rows[0]?.business_id ?? null);
@@ -110,12 +98,4 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   }, [activeId, error, loading, memberships, refresh]);
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
-}
-
-export function useTenant(): TenantState {
-  const ctx = useContext(TenantContext);
-  if (!ctx) {
-    throw new Error("useTenant must be used within TenantProvider");
-  }
-  return ctx;
 }

@@ -1,4 +1,4 @@
-import { useTenant } from "../../dashboard/TenantProvider";
+import { useTenant } from "../../dashboard/useTenant";
 
 export function NfcPage() {
   const { active, loading } = useTenant();
