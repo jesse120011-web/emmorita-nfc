@@ -22,11 +22,12 @@ export function PublicProfilePage() {
       setStatus("unconfigured");
       return;
     }
+    const client = supabase;
 
     let cancelled = false;
 
     async function load() {
-      const profileResult = await supabase
+      const profileResult = await client
         .from("public_profiles")
         .select("id, slug, name, country_code, logo_url, tagline, description, location_label")
         .eq("slug", slug)
@@ -44,7 +45,7 @@ export function PublicProfilePage() {
       const row = profileResult.data as PublicProfile;
       setProfile(row);
 
-      const linksResult = await supabase
+      const linksResult = await client
         .from("public_links")
         .select("id, business_id, kind, label, href, sort_order")
         .eq("business_id", row.id)

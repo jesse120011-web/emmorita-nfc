@@ -9,7 +9,7 @@ import {
 } from "react";
 import { getSupabaseBrowserClient } from "../lib/supabase";
 import { slugify } from "../lib/slug";
-import type { BusinessRow, MembershipRow } from "../lib/types";
+import type { MembershipRow } from "../lib/types";
 
 type TenantState = {
   loading: boolean;
@@ -23,10 +23,16 @@ type TenantState = {
 
 const TenantContext = createContext<TenantState | null>(null);
 
-function isBusinessArray(
-  business: MembershipRow["businesses"],
-): business is BusinessRow[] {
-  return Array.isArray(business);
+type MembershipBusiness = NonNullable<MembershipRow["businesses"]>;
+type MembershipQueryRow = Omit<MembershipRow, "businesses"> & {
+  businesses: MembershipBusiness[] | null;
+};
+
+function normalizeMembership(row: MembershipQueryRow): MembershipRow {
+  return {
+    ...row,
+    businesses: row.businesses?.[0] ?? null,
+  };
 }
 
 export function TenantProvider({ children }: { children: ReactNode }) {
@@ -46,19 +52,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     const { data, error: queryError } = await supabase
       .from("business_members")
       .select("id, business_id, role, businesses(id, name, slug, status, country_code)")
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .returns<MembershipQueryRow[]>();
 
     if (queryError) {
       setError(queryError.message);
       setMemberships([]);
     } else {
-      const rows = ((data as MembershipRow[] | null) ?? []).map((row) => {
-        const businesses = row.businesses;
-        return {
-          ...row,
-          businesses: isBusinessArray(businesses) ? (businesses[0] ?? null) : businesses,
-        };
-      });
+      const rows = (data ?? []).map(normalizeMembership);
       setMemberships(rows);
       setError(null);
       setActiveId((current) => current ?? rows[0]?.business_id ?? null);
