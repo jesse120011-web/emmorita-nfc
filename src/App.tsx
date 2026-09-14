@@ -5,6 +5,7 @@ import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PublicProfilePage } from "./pages/PublicProfilePage";
+import { ScanRedirectPage } from "./pages/ScanRedirectPage";
 import { AnalyticsPage } from "./pages/dashboard/AnalyticsPage";
 import { DashboardLayout } from "./pages/dashboard/DashboardLayout";
 import { NfcPage } from "./pages/dashboard/NfcPage";
@@ -18,6 +19,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/scan/:publicToken" element={<ScanRedirectPage />} />
       <Route path="/t/:slug" element={<PublicProfilePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route

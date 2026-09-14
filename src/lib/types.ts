@@ -11,6 +11,15 @@ export type LinkKind =
   | "custom";
 
 export type AnalyticsEventType =
+  | "QR_SCAN"
+  | "NFC_TAP"
+  | "PROFILE_VIEW"
+  | "MENU_VIEW"
+  | "WHATSAPP_CLICK"
+  | "CALL_CLICK"
+  | "WEBSITE_CLICK"
+  | "DIRECTIONS_CLICK"
+  | "REVIEW_CLICK"
   | "profile_view"
   | "nfc_scan"
   | "qr_scan"
@@ -48,6 +57,16 @@ export type PublicLink = {
   label: string;
   href: string;
   sort_order: number;
+};
+
+export type PublicTouchpointResolution = {
+  public_token: string;
+  touchpoint_id: string;
+  business_id: string;
+  slug: string;
+  channel: "qr" | "nfc";
+  qr_code_id: string | null;
+  nfc_tag_id: string | null;
 };
 
 export type MembershipRow = {
