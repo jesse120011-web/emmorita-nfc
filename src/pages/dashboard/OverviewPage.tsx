@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { useTenant } from "../../dashboard/TenantProvider";
+import { useTenant } from "../../dashboard/useTenant";
 
 export function OverviewPage() {
   const { loading, error, memberships, active, createBusiness, setActiveBusinessId } = useTenant();

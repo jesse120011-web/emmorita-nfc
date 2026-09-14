@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTenant } from "../../dashboard/TenantProvider";
+import { useTenant } from "../../dashboard/useTenant";
 import { getSupabaseBrowserClient } from "../../lib/supabase";
 
 export function SettingsPage() {

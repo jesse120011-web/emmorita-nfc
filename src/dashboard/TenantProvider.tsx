@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -10,18 +8,7 @@ import {
 import { getSupabaseBrowserClient } from "../lib/supabase";
 import { slugify } from "../lib/slug";
 import type { MembershipRow } from "../lib/types";
-
-type TenantState = {
-  loading: boolean;
-  error: string | null;
-  memberships: MembershipRow[];
-  active: MembershipRow | null;
-  setActiveBusinessId: (id: string) => void;
-  createBusiness: (name: string) => Promise<string | null>;
-  refresh: () => Promise<void>;
-};
-
-const TenantContext = createContext<TenantState | null>(null);
+import { TenantContext, type TenantState } from "./tenant-context";
 
 type MembershipBusiness = NonNullable<MembershipRow["businesses"]>;
 type MembershipQueryRow = Omit<MembershipRow, "businesses"> & {
@@ -111,12 +98,4 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   }, [activeId, error, loading, memberships, refresh]);
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
-}
-
-export function useTenant(): TenantState {
-  const ctx = useContext(TenantContext);
-  if (!ctx) {
-    throw new Error("useTenant must be used within TenantProvider");
-  }
-  return ctx;
 }
