@@ -6,6 +6,9 @@ type TrackInput = {
   businessId: string;
   eventType: AnalyticsEventType;
   source: ProfileSource;
+  touchpointId?: string;
+  qrCodeId?: string;
+  nfcTagId?: string;
   linkId?: string;
 };
 
@@ -21,19 +24,15 @@ export function sourceFromSearch(search: string): ProfileSource {
 export function eventTypeForLinkKind(kind: LinkKind): AnalyticsEventType {
   switch (kind) {
     case "website":
-      return "website_click";
+      return "WEBSITE_CLICK";
     case "whatsapp":
-      return "whatsapp_click";
+      return "WHATSAPP_CLICK";
     case "phone":
-      return "phone_click";
+      return "CALL_CLICK";
     case "maps":
-      return "map_click";
-    case "booking":
-      return "booking_click";
-    case "email":
-      return "email_click";
+      return "DIRECTIONS_CLICK";
     default:
-      return "social_click";
+      return "WEBSITE_CLICK";
   }
 }
 
@@ -50,6 +49,9 @@ export async function trackEvent(input: TrackInput): Promise<void> {
     business_id: input.businessId,
     event_type: input.eventType,
     source: input.source,
+    touchpoint_id: input.touchpointId ?? null,
+    qr_code_id: input.qrCodeId ?? null,
+    nfc_tag_id: input.nfcTagId ?? null,
     link_id: input.linkId ?? null,
     device_class: classifyDevice(userAgent),
     user_agent: userAgent || null,

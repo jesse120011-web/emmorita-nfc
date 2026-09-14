@@ -5,12 +5,13 @@ import { SiteHeader } from "../components/SiteHeader";
 import { sourceFromSearch, trackEvent } from "../lib/analytics";
 import { getPublicEnv } from "../lib/env";
 import { getSupabaseBrowserClient } from "../lib/supabase";
-import type { PublicLink, PublicProfile } from "../lib/types";
+import type { PublicLink, PublicProfile, PublicTouchpointResolution } from "../lib/types";
 
 export function PublicProfilePage() {
   const { slug = "" } = useParams();
   const location = useLocation();
   const source = useMemo(() => sourceFromSearch(location.search), [location.search]);
+  const touchpointToken = useMemo(() => new URLSearchParams(location.search).get("tp"), [location.search]);
   const [status, setStatus] = useState<"loading" | "missing" | "ready" | "unconfigured">("loading");
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [links, setLinks] = useState<PublicLink[]>([]);
@@ -45,6 +46,28 @@ export function PublicProfilePage() {
       const row = profileResult.data as PublicProfile;
       setProfile(row);
 
+      let touchpointContext: Pick<
+        PublicTouchpointResolution,
+        "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel"
+      > | null = null;
+      if (touchpointToken) {
+        const touchpointResult = await client
+          .from("public_touchpoint_resolutions")
+          .select("business_id, touchpoint_id, channel, qr_code_id, nfc_tag_id")
+          .eq("public_token", touchpointToken)
+          .maybeSingle();
+
+        if (!touchpointResult.error && touchpointResult.data) {
+          const resolution = touchpointResult.data as Pick<
+            PublicTouchpointResolution,
+            "business_id" | "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel"
+          >;
+          if (resolution.business_id === row.id) {
+            touchpointContext = resolution;
+          }
+        }
+      }
+
       const linksResult = await client
         .from("public_links")
         .select("id, business_id, kind, label, href, sort_order")
@@ -58,15 +81,32 @@ export function PublicProfilePage() {
 
       await trackEvent({
         businessId: row.id,
-        eventType: "profile_view",
+        eventType: "PROFILE_VIEW",
         source,
+        touchpointId: touchpointContext?.touchpoint_id,
+        qrCodeId: touchpointContext?.qr_code_id ?? undefined,
+        nfcTagId: touchpointContext?.nfc_tag_id ?? undefined,
       });
 
       if (source === "nfc") {
-        await trackEvent({ businessId: row.id, eventType: "nfc_scan", source });
+        await trackEvent({
+          businessId: row.id,
+          eventType: "NFC_TAP",
+          source,
+          touchpointId: touchpointContext?.touchpoint_id,
+          qrCodeId: touchpointContext?.qr_code_id ?? undefined,
+          nfcTagId: touchpointContext?.nfc_tag_id ?? undefined,
+        });
       }
       if (source === "qr") {
-        await trackEvent({ businessId: row.id, eventType: "qr_scan", source });
+        await trackEvent({
+          businessId: row.id,
+          eventType: "QR_SCAN",
+          source,
+          touchpointId: touchpointContext?.touchpoint_id,
+          qrCodeId: touchpointContext?.qr_code_id ?? undefined,
+          nfcTagId: touchpointContext?.nfc_tag_id ?? undefined,
+        });
       }
     }
 
@@ -112,6 +152,7 @@ export function PublicProfilePage() {
                   href={link.href}
                   label={link.label}
                   source={source}
+                  touchpointId={touchpointContext?.touchpoint_id}
                 />
               ))}
             </div>

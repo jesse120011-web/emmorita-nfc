@@ -8,15 +8,17 @@ type Props = {
   href: string;
   label: string;
   source: ProfileSource;
+  touchpointId?: string;
 };
 
-export function PublicLinkButton({ businessId, linkId, kind, href, label, source }: Props) {
+export function PublicLinkButton({ businessId, linkId, kind, href, label, source, touchpointId }: Props) {
   async function onClick() {
     const eventType: AnalyticsEventType = eventTypeForLinkKind(kind);
     await trackEvent({
       businessId,
       eventType,
       source,
+      touchpointId,
       linkId,
     });
   }
