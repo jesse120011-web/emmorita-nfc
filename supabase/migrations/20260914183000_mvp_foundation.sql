@@ -1,5 +1,5 @@
 -- MVP architecture foundation: touchpoints, event integrity, menus, reviews
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 create type public.touchpoint_channel as enum ('qr', 'nfc');
 create type public.touchpoint_status as enum ('active', 'inactive');
@@ -10,7 +10,7 @@ create table public.touchpoints (
   channel public.touchpoint_channel not null,
   label text not null check (char_length(label) between 1 and 120),
   status public.touchpoint_status not null default 'active',
-  public_token text not null default encode(gen_random_bytes(16), 'hex'),
+  public_token text not null default encode(extensions.gen_random_bytes(16), 'hex'),
   qr_code_id uuid references public.qr_codes (id) on delete set null,
   nfc_tag_id uuid references public.nfc_tags (id) on delete set null,
   created_at timestamptz not null default now(),
@@ -56,7 +56,7 @@ select
   'qr'::public.touchpoint_channel,
   coalesce(nullif(q.label, ''), 'QR ' || substr(q.id::text, 1, 8)),
   case when q.status = 'active' then 'active'::public.touchpoint_status else 'inactive'::public.touchpoint_status end,
-  encode(gen_random_bytes(16), 'hex'),
+  encode(extensions.gen_random_bytes(16), 'hex'),
   q.id
 from public.qr_codes q
 where q.deleted_at is null
@@ -77,7 +77,7 @@ select
   'nfc'::public.touchpoint_channel,
   coalesce(nullif(n.label, ''), 'NFC ' || substr(n.id::text, 1, 8)),
   case when n.status = 'active' then 'active'::public.touchpoint_status else 'inactive'::public.touchpoint_status end,
-  encode(gen_random_bytes(16), 'hex'),
+  encode(extensions.gen_random_bytes(16), 'hex'),
   n.id
 from public.nfc_tags n
 where n.business_id is not null
