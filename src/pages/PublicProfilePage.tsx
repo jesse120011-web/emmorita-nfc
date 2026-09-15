@@ -98,28 +98,29 @@ export function PublicProfilePage() {
         nfcTagId: resolvedContext?.nfc_tag_id ?? undefined,
       });
 
-      if (source === "nfc") {
+      if (resolvedContext?.channel === "nfc") {
         await trackEvent({
           businessId: row.id,
           eventType: "NFC_TAP",
-          source,
-          touchpointId: resolvedContext?.touchpoint_id,
-          qrCodeId: resolvedContext?.qr_code_id ?? undefined,
-          nfcTagId: resolvedContext?.nfc_tag_id ?? undefined,
+          source: "nfc",
+          touchpointId: resolvedContext.touchpoint_id,
+          qrCodeId: resolvedContext.qr_code_id ?? undefined,
+          nfcTagId: resolvedContext.nfc_tag_id ?? undefined,
         });
       }
-      if (source === "qr") {
+      
+      if (resolvedContext?.channel === "qr") {
         await trackEvent({
           businessId: row.id,
           eventType: "QR_SCAN",
-          source,
-          touchpointId: resolvedContext?.touchpoint_id,
-          qrCodeId: resolvedContext?.qr_code_id ?? undefined,
-          nfcTagId: resolvedContext?.nfc_tag_id ?? undefined,
+          source: "qr",
+          touchpointId: resolvedContext.touchpoint_id,
+          qrCodeId: resolvedContext.qr_code_id ?? undefined,
+          nfcTagId: resolvedContext.nfc_tag_id ?? undefined,
         });
-      }
-    }
-
+      } 
+    } 
+    
     void load();
     return () => {
       cancelled = true;
