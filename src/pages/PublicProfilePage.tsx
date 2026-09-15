@@ -15,6 +15,10 @@ export function PublicProfilePage() {
   const [status, setStatus] = useState<"loading" | "missing" | "ready" | "unconfigured">("loading");
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [links, setLinks] = useState<PublicLink[]>([]);
+  const [touchpointContext, setTouchpointContext] = useState<
+    | Pick<PublicTouchpointResolution, "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel">
+    | null
+  >(null);
 
   useEffect(() => {
     const env = getPublicEnv();
@@ -46,10 +50,15 @@ export function PublicProfilePage() {
       const row = profileResult.data as PublicProfile;
       setProfile(row);
 
-      let touchpointContext: Pick<
+      // keep a local resolvedContext to pass to analytics immediately
+      let resolvedContext: Pick<
         PublicTouchpointResolution,
-        "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel"
+        "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel" | "business_id"
       > | null = null;
+
+      // clear previous context each load
+      setTouchpointContext(null);
+
       if (touchpointToken) {
         const touchpointResult = await client
           .from("public_touchpoint_resolutions")
@@ -63,7 +72,8 @@ export function PublicProfilePage() {
             "business_id" | "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel"
           >;
           if (resolution.business_id === row.id) {
-            touchpointContext = resolution;
+            resolvedContext = resolution;
+            setTouchpointContext(resolution);
           }
         }
       }
@@ -83,9 +93,9 @@ export function PublicProfilePage() {
         businessId: row.id,
         eventType: "PROFILE_VIEW",
         source,
-        touchpointId: touchpointContext?.touchpoint_id,
-        qrCodeId: touchpointContext?.qr_code_id ?? undefined,
-        nfcTagId: touchpointContext?.nfc_tag_id ?? undefined,
+        touchpointId: resolvedContext?.touchpoint_id,
+        qrCodeId: resolvedContext?.qr_code_id ?? undefined,
+        nfcTagId: resolvedContext?.nfc_tag_id ?? undefined,
       });
 
       if (source === "nfc") {
@@ -93,9 +103,9 @@ export function PublicProfilePage() {
           businessId: row.id,
           eventType: "NFC_TAP",
           source,
-          touchpointId: touchpointContext?.touchpoint_id,
-          qrCodeId: touchpointContext?.qr_code_id ?? undefined,
-          nfcTagId: touchpointContext?.nfc_tag_id ?? undefined,
+          touchpointId: resolvedContext?.touchpoint_id,
+          qrCodeId: resolvedContext?.qr_code_id ?? undefined,
+          nfcTagId: resolvedContext?.nfc_tag_id ?? undefined,
         });
       }
       if (source === "qr") {
@@ -103,9 +113,9 @@ export function PublicProfilePage() {
           businessId: row.id,
           eventType: "QR_SCAN",
           source,
-          touchpointId: touchpointContext?.touchpoint_id,
-          qrCodeId: touchpointContext?.qr_code_id ?? undefined,
-          nfcTagId: touchpointContext?.nfc_tag_id ?? undefined,
+          touchpointId: resolvedContext?.touchpoint_id,
+          qrCodeId: resolvedContext?.qr_code_id ?? undefined,
+          nfcTagId: resolvedContext?.nfc_tag_id ?? undefined,
         });
       }
     }
@@ -114,7 +124,7 @@ export function PublicProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [slug, source]);
+  }, [slug, source, touchpointToken]);
 
   return (
     <>
