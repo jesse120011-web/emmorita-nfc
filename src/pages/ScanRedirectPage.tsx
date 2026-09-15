@@ -18,9 +18,10 @@ export function ScanRedirectPage() {
       return;
     }
 
+    const client = supabase;
     let cancelled = false;
     async function load() {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("public_touchpoint_resolutions")
         .select("slug, channel, public_token")
         .eq("public_token", publicToken)
