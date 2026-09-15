@@ -1,4 +1,5 @@
 -- MVP architecture foundation: touchpoints, event integrity, menus, reviews
+create extension if not exists pgcrypto;
 
 create type public.touchpoint_channel as enum ('qr', 'nfc');
 create type public.touchpoint_status as enum ('active', 'inactive');
