@@ -13,6 +13,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const configured = getPublicEnv().configured;
   const [loading, setLoading] = useState(configured);
   const [session, setSession] = useState<Session | null>(null);
+  const [fatalError, setFatalError] = useState<Error | null>(null);
+
+  if (fatalError) {
+    throw fatalError;
+  }
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -23,12 +28,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled) {
-        setSession(data.session);
-        setLoading(false);
-      }
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!cancelled) {
+          setSession(data.session);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFatalError(new Error("We could not restore your session. Reload and sign in again."));
+          setLoading(false);
+        }
+      });
 
     const {
       data: { subscription },

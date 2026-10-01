@@ -5,6 +5,18 @@ export type PublicEnv = {
   supabaseAnonKey: string;
 };
 
+export type PublicEnvErrorCode = "forbidden_service_role_exposure";
+
+export class PublicEnvError extends Error {
+  readonly code: PublicEnvErrorCode;
+
+  constructor(code: PublicEnvErrorCode) {
+    super("Invalid public configuration.");
+    this.name = "PublicEnvError";
+    this.code = code;
+  }
+}
+
 function read(name: "VITE_PUBLIC_APP_URL" | "VITE_SUPABASE_URL" | "VITE_SUPABASE_ANON_KEY"): string {
   const value = import.meta.env[name];
   return typeof value === "string" ? value.trim() : "";
@@ -20,9 +32,7 @@ function isPlaceholder(value: string): boolean {
 
 export function getPublicEnv(): PublicEnv {
   if (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY must never be exposed to the browser. Remove any VITE_ service-role variable.",
-    );
+    throw new PublicEnvError("forbidden_service_role_exposure");
   }
 
   const supabaseUrl = read("VITE_SUPABASE_URL");
