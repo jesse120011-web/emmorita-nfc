@@ -54,7 +54,7 @@ function FatalErrorScreen({
   );
 }
 
-export class AppErrorBoundary extends Component<{ children: ReactNode }, BoundaryState> {
+class AppErrorBoundaryImpl extends Component<{ children: ReactNode }, BoundaryState> {
   state: BoundaryState = {
     error: null,
     retryToken: 0,
@@ -79,4 +79,8 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, Boundar
 
     return <Fragment key={retryToken}>{this.props.children}</Fragment>;
   }
+}
+
+export function AppErrorBoundary({ children }: { children: ReactNode }) {
+  return <AppErrorBoundaryImpl>{children}</AppErrorBoundaryImpl>;
 }
