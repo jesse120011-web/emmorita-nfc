@@ -1,8 +1,8 @@
 import type { AnalyticsEventType, LinkKind, ProfileSource } from "../lib/types";
 import { eventTypeForLinkKind, trackEvent } from "../lib/analytics";
+import { isSafeHref } from "../lib/urls";
 
 type Props = {
-  businessId: string;
   linkId: string;
   kind: LinkKind;
   href: string;
@@ -11,20 +11,33 @@ type Props = {
   touchpointId?: string;
 };
 
-export function PublicLinkButton({ businessId, linkId, kind, href, label, source, touchpointId }: Props) {
+export function PublicLinkButton({ linkId, kind, href, label, source, touchpointId }: Props) {
+  if (!isSafeHref(href)) {
+    return null;
+  }
+
+  const openInNewTab = href.startsWith("http");
+  const rel = openInNewTab ? "noopener noreferrer" : undefined;
+
   async function onClick() {
     const eventType: AnalyticsEventType = eventTypeForLinkKind(kind);
     await trackEvent({
-      businessId,
       eventType,
       source,
-      touchpointId,
       linkId,
+      touchpointId,
     });
   }
 
   return (
-    <a className="cta" href={href} onClick={() => void onClick()}>
+    <a
+      className="cta"
+      href={href}
+      target={openInNewTab ? "_blank" : undefined}
+      rel={rel}
+      aria-label={label}
+      onClick={() => void onClick()}
+    >
       {label}
     </a>
   );

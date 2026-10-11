@@ -1,14 +1,12 @@
-import { classifyDevice, truncate } from "./device";
-import { getSupabaseBrowserClient } from "./supabase";
+import { getPublicEnv } from "./env";
 import type { AnalyticsEventType, LinkKind, ProfileSource } from "./types";
 
-type TrackInput = {
-  businessId: string;
+type TrackPayload = {
   eventType: AnalyticsEventType;
   source: ProfileSource;
+  slug?: string;
+  publicToken?: string;
   touchpointId?: string;
-  qrCodeId?: string;
-  nfcTagId?: string;
   linkId?: string;
 };
 
@@ -36,29 +34,45 @@ export function eventTypeForLinkKind(kind: LinkKind): AnalyticsEventType {
   }
 }
 
-export async function trackEvent(input: TrackInput): Promise<void> {
-  const supabase = getSupabaseBrowserClient();
-  if (!supabase) {
-    return;
-  }
+export async function trackEvent(input: TrackPayload): Promise<void> {
+  const env = getPublicEnv();
+  if (!env.configured) return;
 
-  const userAgent = truncate(navigator.userAgent);
-  const referrer = truncate(document.referrer);
-
-  const { error } = await supabase.from("analytics_events").insert({
-    business_id: input.businessId,
+  const payload: Record<string, unknown> = {
     event_type: input.eventType,
     source: input.source,
-    touchpoint_id: input.touchpointId ?? null,
-    qr_code_id: input.qrCodeId ?? null,
-    nfc_tag_id: input.nfcTagId ?? null,
-    link_id: input.linkId ?? null,
-    device_class: classifyDevice(userAgent),
-    user_agent: userAgent || null,
-    referrer: referrer || null,
-  });
+  };
 
-  if (error && import.meta.env.DEV) {
-    console.warn("analytics insert skipped", error.message);
+  if (input.slug) {
+    payload.slug = input.slug;
+  }
+  if (input.publicToken) {
+    payload.public_token = input.publicToken;
+  }
+  if (input.touchpointId) {
+    payload.touchpoint_id = input.touchpointId;
+  }
+  if (input.linkId) {
+    payload.link_id = input.linkId;
+  }
+
+  const url = `${env.supabaseUrl.replace(/\/$/, "")}/functions/v1/track-analytics`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: env.supabaseAnonKey,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok && import.meta.env.DEV) {
+      console.warn("analytics post failed", res.status);
+    }
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn("analytics error", error);
+    }
   }
 }

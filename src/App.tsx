@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+﻿import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireAuth } from "./auth/RequireAuth";
 import { TenantProvider } from "./dashboard/TenantProvider";
 import { HomePage } from "./pages/HomePage";
@@ -7,13 +7,15 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { PublicProfilePage } from "./pages/PublicProfilePage";
 import { ScanRedirectPage } from "./pages/ScanRedirectPage";
 import { AnalyticsPage } from "./pages/dashboard/AnalyticsPage";
+import { BranchesPage } from "./pages/dashboard/BranchesPage";
+import { CustomersPage } from "./pages/dashboard/CustomersPage";
 import { DashboardLayout } from "./pages/dashboard/DashboardLayout";
-import { NfcPage } from "./pages/dashboard/NfcPage";
 import { OverviewPage } from "./pages/dashboard/OverviewPage";
 import { ProfilePage } from "./pages/dashboard/ProfilePage";
-import { QrPage } from "./pages/dashboard/QrPage";
+import { ReputationPage } from "./pages/dashboard/ReputationPage";
 import { SettingsPage } from "./pages/dashboard/SettingsPage";
 import { TeamPage } from "./pages/dashboard/TeamPage";
+import { TouchpointsPage } from "./pages/dashboard/TouchpointsPage";
 
 export function App() {
   return (
@@ -33,12 +35,16 @@ export function App() {
         }
       >
         <Route index element={<OverviewPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="nfc" element={<NfcPage />} />
-        <Route path="qr" element={<QrPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="touchpoints" element={<TouchpointsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="reputation" element={<ReputationPage />} />
+        <Route path="branches" element={<BranchesPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="team" element={<TeamPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="nfc" element={<TouchpointsPage />} />
+        <Route path="qr" element={<TouchpointsPage />} />
       </Route>
       <Route path="/dashboard" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<NotFoundPage />} />

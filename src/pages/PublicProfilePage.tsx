@@ -5,6 +5,7 @@ import { SiteHeader } from "../components/SiteHeader";
 import { sourceFromSearch, trackEvent } from "../lib/analytics";
 import { getPublicEnv } from "../lib/env";
 import { getSupabaseBrowserClient } from "../lib/supabase";
+import { isSafeHref } from "../lib/urls";
 import type { PublicLink, PublicProfile, PublicTouchpointResolution } from "../lib/types";
 
 export function PublicProfilePage() {
@@ -50,13 +51,10 @@ export function PublicProfilePage() {
       const row = profileResult.data as PublicProfile;
       setProfile(row);
 
-      // keep a local resolvedContext to pass to analytics immediately
-      let resolvedContext: Pick<
-        PublicTouchpointResolution,
-        "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel" | "business_id"
-      > | null = null;
+      let resolvedContext:
+        | Pick<PublicTouchpointResolution, "touchpoint_id" | "qr_code_id" | "nfc_tag_id" | "channel" | "business_id">
+        | null = null;
 
-      // clear previous context each load
       setTouchpointContext(null);
 
       if (touchpointToken) {
@@ -90,85 +88,109 @@ export function PublicProfilePage() {
       }
 
       await trackEvent({
-        businessId: row.id,
         eventType: "PROFILE_VIEW",
         source,
-        touchpointId: resolvedContext?.touchpoint_id,
-        qrCodeId: resolvedContext?.qr_code_id ?? undefined,
-        nfcTagId: resolvedContext?.nfc_tag_id ?? undefined,
+        slug,
+        publicToken: touchpointToken ?? undefined,
+        touchpointId: resolvedContext?.touchpoint_id ?? undefined,
       });
 
       if (resolvedContext?.channel === "nfc") {
         await trackEvent({
-          businessId: row.id,
           eventType: "NFC_TAP",
           source: "nfc",
-          touchpointId: resolvedContext.touchpoint_id,
-          qrCodeId: resolvedContext.qr_code_id ?? undefined,
-          nfcTagId: resolvedContext.nfc_tag_id ?? undefined,
+          slug,
+          publicToken: touchpointToken ?? undefined,
+          touchpointId: resolvedContext.touchpoint_id ?? undefined,
         });
       }
-      
+
       if (resolvedContext?.channel === "qr") {
         await trackEvent({
-          businessId: row.id,
           eventType: "QR_SCAN",
           source: "qr",
-          touchpointId: resolvedContext.touchpoint_id,
-          qrCodeId: resolvedContext.qr_code_id ?? undefined,
-          nfcTagId: resolvedContext.nfc_tag_id ?? undefined,
+          slug,
+          publicToken: touchpointToken ?? undefined,
+          touchpointId: resolvedContext.touchpoint_id ?? undefined,
         });
-      } 
-    } 
-    
+      }
+    }
+
     void load();
     return () => {
       cancelled = true;
     };
   }, [slug, source, touchpointToken]);
 
+  const safeLinks = links.filter((link) => isSafeHref(link.href));
+  const arrival =
+    touchpointContext?.channel === "nfc"
+      ? "Arrived via NFC tap"
+      : touchpointContext?.channel === "qr"
+        ? "Arrived via QR scan"
+        : null;
+
   return (
     <>
       <SiteHeader />
-      <main className="page">
-        {status === "loading" ? <p>Loading profile…</p> : null}
+      <main className="page stack">
+        {status === "loading" ? (
+          <section className="card skeleton-card" role="status">
+            <div className="loading-block" />
+            <div className="loading-block" />
+          </section>
+        ) : null}
+
         {status === "unconfigured" ? (
-          <section className="card">
+          <section className="card stack" role="alert">
             <h1>Profile unavailable</h1>
             <p>This environment is missing Supabase public credentials.</p>
           </section>
         ) : null}
+
         {status === "missing" ? (
-          <section className="card">
+          <section className="card stack" role="alert">
             <h1>Business not found</h1>
             <p>This profile is unpublished, suspended, or the link is incorrect.</p>
           </section>
         ) : null}
+
         {status === "ready" && profile ? (
-          <article className="profile-card">
-            {profile.logo_url ? (
-              <img className="logo" src={profile.logo_url} alt={`${profile.name} logo`} />
-            ) : null}
-            <h1>{profile.name}</h1>
-            {profile.tagline ? <p>{profile.tagline}</p> : null}
-            {profile.location_label ? <p className="muted">{profile.location_label}</p> : null}
-            {profile.description ? <p>{profile.description}</p> : null}
-            <div className="cta-list">
-              {links.map((link) => (
+          <article className="profile-card" aria-label="Public profile">
+            <div className="profile-header">
+              {profile.logo_url ? (
+                <img className="logo" src={profile.logo_url} alt={`${profile.name} logo`} />
+              ) : (
+                <div className="logo" aria-hidden="true" />
+              )}
+              <div className="stack">
+                <p className="eyebrow">EmmOrita business profile</p>
+                <h1>{profile.name}</h1>
+                {profile.tagline ? <p className="muted">{profile.tagline}</p> : null}
+                {arrival ? <span className="pill active">{arrival}</span> : null}
+              </div>
+            </div>
+
+            <div className="profile-meta">
+              {profile.location_label ? <span><strong>Location:</strong> {profile.location_label}</span> : null}
+              {profile.description ? <span>{profile.description}</span> : null}
+            </div>
+
+            <div className="profile-actions cta-list" aria-label="Available actions">
+              {safeLinks.map((link) => (
                 <PublicLinkButton
                   key={link.id}
-                  businessId={profile.id}
                   linkId={link.id}
                   kind={link.kind}
                   href={link.href}
                   label={link.label}
                   source={source}
-                  touchpointId={touchpointContext?.touchpoint_id}
+                  touchpointId={touchpointContext?.touchpoint_id ?? undefined}
                 />
               ))}
             </div>
-            {links.length === 0 ? (
-              <p className="muted">This business has not added public actions yet.</p>
+            {safeLinks.length === 0 ? (
+              <p className="muted">This business has not added safe public actions yet.</p>
             ) : null}
           </article>
         ) : null}
