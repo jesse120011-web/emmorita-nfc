@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -34,6 +34,7 @@ type ResolvedContext = {
   qr_code_id: string | null;
   nfc_tag_id: string | null;
   link_id: string | null;
+  branch_id: string | null;
   channel: Channel;
 };
 
@@ -63,6 +64,18 @@ async function ensureBusinessIsPublic(businessId: string): Promise<boolean> {
   return Boolean(data);
 }
 
+async function ensureBranchBelongs(businessId: string, branchId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("branches")
+    .select("business_id")
+    .eq("id", branchId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(`branch lookup failed: ${error.message}`);
+  if (!data) throw new Error("branch_not_found");
+  if (data.business_id !== businessId) throw new Error("branch_mismatch");
+}
+
 async function resolveContext(input: {
   public_token?: string;
   touchpoint_id?: string;
@@ -85,6 +98,7 @@ async function resolveContext(input: {
       qr_code_id: data.qr_code_id,
       nfc_tag_id: data.nfc_tag_id,
       link_id: null,
+      branch_id: null,
       channel: (data.channel as Channel) ?? "unknown",
     };
   }
@@ -92,7 +106,7 @@ async function resolveContext(input: {
   if (input.touchpoint_id) {
     const { data, error } = await supabase
       .from("touchpoints")
-      .select("id,business_id,qr_code_id,nfc_tag_id,channel")
+      .select("id,business_id,qr_code_id,nfc_tag_id,channel,branch_id")
       .eq("id", input.touchpoint_id)
       .maybeSingle();
     if (error) throw new Error(`touchpoint lookup failed: ${error.message}`);
@@ -103,6 +117,7 @@ async function resolveContext(input: {
       qr_code_id: data.qr_code_id,
       nfc_tag_id: data.nfc_tag_id,
       link_id: null,
+      branch_id: data.branch_id,
       channel: (data.channel as Channel) ?? input.source ?? "unknown",
     };
   }
@@ -121,6 +136,7 @@ async function resolveContext(input: {
       qr_code_id: null,
       nfc_tag_id: null,
       link_id: data.id,
+      branch_id: null,
       channel: input.source ?? "unknown",
     };
   }
@@ -141,6 +157,7 @@ async function resolveContext(input: {
       qr_code_id: null,
       nfc_tag_id: null,
       link_id: null,
+      branch_id: null,
       channel: "web",
     };
   }
@@ -160,10 +177,14 @@ serve(async (req) => {
       return new Response("payload too large", { status: 413 });
     }
 
-    let body: any;
+    let body: Record<string, unknown>;
     try {
-      body = JSON.parse(raw || "{}");
-    } catch (_err) {
+      const parsed = JSON.parse(raw || "{}");
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return new Response("invalid json", { status: 400 });
+      }
+      body = parsed as Record<string, unknown>;
+    } catch {
       return new Response("invalid json", { status: 400 });
     }
 
@@ -183,6 +204,15 @@ serve(async (req) => {
       source,
       event_type,
     });
+
+    const explicitBranch = typeof body.branch_id === "string" ? body.branch_id : null;
+    const branch_id = explicitBranch ?? context.branch_id;
+    if (branch_id) {
+      await ensureBranchBelongs(context.business_id, branch_id);
+      if (context.branch_id && context.branch_id !== branch_id) {
+        return new Response("branch_touchpoint_mismatch", { status: 400 });
+      }
+    }
 
     const isPublic = await ensureBusinessIsPublic(context.business_id);
     if (!isPublic) {
@@ -225,6 +255,7 @@ serve(async (req) => {
       qr_code_id: context.qr_code_id,
       nfc_tag_id: context.nfc_tag_id,
       link_id: context.link_id,
+      branch_id,
       device_class,
       user_agent: user_agent || null,
       referrer: referrer || null,
@@ -243,11 +274,14 @@ serve(async (req) => {
       message === "touchpoint_not_found" ||
       message === "profile_not_found" ||
       message === "context_missing" ||
-      message === "link_not_found"
+      message === "link_not_found" ||
+      message === "branch_not_found"
         ? 404
-        : message.toLowerCase().includes("rate limit exceeded")
-          ? 429
-          : 500;
+        : message === "branch_mismatch" || message === "branch_touchpoint_mismatch"
+          ? 400
+          : message.toLowerCase().includes("rate limit exceeded")
+            ? 429
+            : 500;
     console.error("track-analytics error", message);
     return new Response(message, { status });
   }

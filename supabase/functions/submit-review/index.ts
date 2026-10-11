@@ -78,7 +78,7 @@ serve(async (req) => {
         return jsonResponse(400, { error: "invalid_json" });
       }
       body = parsed as Record<string, unknown>;
-    } catch (_err) {
+    } catch {
       return jsonResponse(400, { error: "invalid_json" });
     }
 
